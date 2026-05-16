@@ -1,0 +1,17 @@
+{
+  "work_type_id": "writing",
+  "name": "Writing",
+  "description": "Draft or revise prose, documentation, plans, or reports.",
+  "default_expected_outputs": [
+    "draft",
+    "revision notes"
+  ],
+  "allowed_evidence_kinds": [
+    "file",
+    "note"
+  ],
+  "recommended_role_ids": [
+    "writer",
+    "editor"
+  ]
+}

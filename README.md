@@ -1,14 +1,14 @@
 # Staffroom
 
-Staffroom is a local, file-backed CLI for supervised agentic staff work.
-It is agent-first in its interfaces, but supervisor-first in authority:
+Staffroom is a local, file-backed coordination hub for supervised work.
+It tracks assignments for humans, agents, services, and other workers while keeping supervisors in authority:
 
 - supervisors define roles and assign work
-- agents start assigned work, report notes, attach evidence, and submit for review
+- workers start assigned work, report notes, attach evidence, and submit for review
 - supervisors close assignments with final evidence
 - every command that returns data emits parseable JSON
 
-Staffroom does not start agents, run schedulers, call external services, or make autonomous assignment decisions.
+Staffroom is a work ledger and evidence hub. It does not start workers, run schedulers, call external services, hold leases, retry work, or make autonomous assignment decisions.
 
 ## Requirements
 
@@ -50,7 +50,31 @@ Create a role:
 python3 -m staffroom role create reviewer --name "Reviewer" --capability review
 ```
 
-Create an assignment linked to a Proofline run:
+Create a worker profile:
+
+```bash
+python3 -m staffroom worker create agent-reviewer-1 --display-name "Agent Reviewer" --kind agent --capability review
+```
+
+Create a work type template:
+
+```bash
+python3 -m staffroom work-type create research --name "Research" --expected-output summary --evidence-kind url
+```
+
+Create an assignment with a general work contract:
+
+```bash
+python3 -m staffroom assignment create \
+  --role reviewer \
+  --title "Research supervisor protocol options" \
+  --work-type research \
+  --expected-output summary \
+  --acceptance "sources cited" \
+  --context-ref file:docs/plans/2026-05-17-supervisor-protocol-design.md
+```
+
+Proofline remains optional context for coding or review work:
 
 ```bash
 python3 -m staffroom assignment create \
@@ -59,7 +83,13 @@ python3 -m staffroom assignment create \
   --proofline-run vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json
 ```
 
-Assign it to an agent:
+Assign it to a worker:
+
+```bash
+python3 -m staffroom assignment assign asg_12345678 --worker agent-reviewer-1 --supervisor lead
+```
+
+The old `--agent` flag remains a compatibility alias and writes the same identifier to `assigned_worker_id` and `assigned_agent_id`:
 
 ```bash
 python3 -m staffroom assignment assign asg_12345678 --agent agent-reviewer-1 --supervisor lead
@@ -107,12 +137,28 @@ Roles:
 python3 -m staffroom role create <role_id> --name <name> [--description <text>] [--capability <name> ...]
 ```
 
+Workers:
+
+```bash
+python3 -m staffroom worker create <worker_id> --display-name <name> --kind <human|agent|service|other> [--capability <name> ...]
+python3 -m staffroom worker list [--kind <human|agent|service|other>] [--capability <name>]
+python3 -m staffroom worker show <worker_id>
+```
+
+Work types:
+
+```bash
+python3 -m staffroom work-type create <work_type_id> --name <name> [--description <text>] [--expected-output <name> ...] [--evidence-kind <kind> ...] [--recommended-role <role_id> ...]
+python3 -m staffroom work-type list
+python3 -m staffroom work-type show <work_type_id>
+```
+
 Assignments:
 
 ```bash
-python3 -m staffroom assignment create --role <role_id> --title <text> [--proofline-run <path>] [--child-task <path>]
-python3 -m staffroom assignment list [--state <state>] [--role <role_id>] [--agent <agent_id>] [--json]
-python3 -m staffroom assignment assign <assignment_id> --agent <agent_id> [--supervisor <id>]
+python3 -m staffroom assignment create --role <role_id> --title <text> [--work-type <work_type_id>] [--expected-output <name> ...] [--acceptance <text> ...] [--context-ref <kind:value> ...] [--proofline-run <path>] [--child-task <path>]
+python3 -m staffroom assignment list [--state <state>] [--role <role_id>] [--worker <worker_id>] [--agent <agent_id>] [--json]
+python3 -m staffroom assignment assign <assignment_id> (--worker <worker_id> | --agent <agent_id>) [--supervisor <id>]
 python3 -m staffroom assignment start <assignment_id> --agent <agent_id>
 python3 -m staffroom assignment note <assignment_id> --agent <agent_id> --text <text>
 python3 -m staffroom assignment evidence add <assignment_id> --agent <agent_id> --kind <kind> --path <path> [--summary <text>]
@@ -123,12 +169,65 @@ python3 -m staffroom assignment close <assignment_id> --result <done|rejected|bl
 
 The legacy `assignment activate` command still exists for MVP compatibility.
 
+## Worker Profiles
+
+Worker profiles are stored under `workers/<worker_id>.json`.
+
+Required fields:
+
+- `worker_id`
+- `display_name`
+- `worker_kind`
+- `capabilities`
+- `created_at_utc`
+
+`worker_kind` must be one of:
+
+- `human`
+- `agent`
+- `service`
+- `other`
+
+Worker IDs use lowercase letters, numbers, and hyphens.
+
+## Work Type Templates
+
+Work type templates are stored under `work_types/<work_type_id>.json`.
+The repo includes starter templates for `coding`, `research`, `writing`, `review`, `analysis`, and `operations`.
+
+Template fields:
+
+- `work_type_id`
+- `name`
+- `description`
+- `default_expected_outputs`
+- `allowed_evidence_kinds`
+- `recommended_role_ids`
+
+Templates guide assignment creation. Phase 1 does not require an assignment's `work_type` to already exist, so custom work types remain possible.
+
+## Context Refs
+
+Assignments carry generalized `context_refs` instead of requiring Proofline for every task.
+Each context ref is an object with:
+
+- `kind`
+- `path` for local repo files
+- `value` for non-file references such as URLs or notes
+- `label` as optional display text
+
+`--context-ref` accepts `kind:value`. `file`, `proofline_run`, and `child_task` values are stored as local paths; other kinds are stored as values.
+
+Local context paths must be repository-relative, must exist, and must stay inside the repository root.
+
 ## Proofline Links
 
-Each assignment must link to at least one local Proofline artifact:
+Proofline links are still supported but are no longer mandatory for every assignment:
 
 - `--proofline-run <path>`: path to a run manifest
 - `--child-task <path>`: path to a child task packet
+
+These flags are normalized into `context_refs` with `kind` values of `proofline_run` and `child_task`. When present, the legacy `proofline_link` object is also preserved for compatibility.
 
 Rules:
 
@@ -143,6 +242,18 @@ Roles are stored as:
 
 ```text
 staff/<role_id>.json
+```
+
+Workers are stored as:
+
+```text
+workers/<worker_id>.json
+```
+
+Work types are stored as:
+
+```text
+work_types/<work_type_id>.json
 ```
 
 Assignments are stored by state:
@@ -170,10 +281,18 @@ Base fields:
 - `title`
 - `status`
 - `created_at_utc`
+- `context_refs`
+
+Optional contract fields:
+
+- `work_type`
+- `expected_outputs`
+- `acceptance_criteria`
 - `proofline_link`
 
 Supervised protocol fields are added as work progresses:
 
+- `assigned_worker_id`
 - `assigned_agent_id`
 - `assigned_at_utc`
 - `assigned_by`

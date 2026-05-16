@@ -1,0 +1,18 @@
+{
+  "work_type_id": "research",
+  "name": "Research",
+  "description": "Gather facts, compare sources, and produce cited findings.",
+  "default_expected_outputs": [
+    "summary",
+    "source list"
+  ],
+  "allowed_evidence_kinds": [
+    "url",
+    "file",
+    "note"
+  ],
+  "recommended_role_ids": [
+    "researcher",
+    "reviewer"
+  ]
+}

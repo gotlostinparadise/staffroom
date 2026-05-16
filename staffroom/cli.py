@@ -7,8 +7,12 @@ import sys
 
 from staffroom.commands.assignments import register_assignment_commands
 from staffroom.commands.roles import register_role_commands
+from staffroom.commands.work_types import register_work_type_commands
+from staffroom.commands.workers import register_worker_commands
 from staffroom.storage.assignments import AssignmentError, AssignmentNotFoundError, AssignmentStateError
 from staffroom.storage.roles import RoleError
+from staffroom.storage.work_types import WorkTypeError
+from staffroom.storage.workers import WorkerError
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -17,6 +21,8 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     register_role_commands(subparsers)
+    register_worker_commands(subparsers)
+    register_work_type_commands(subparsers)
     register_assignment_commands(subparsers)
 
     return parser
@@ -33,7 +39,14 @@ def main(argv: list[str] | None = None) -> int:
 
         handler(args)
         return 0
-    except (RoleError, AssignmentError, AssignmentStateError, AssignmentNotFoundError) as exc:
+    except (
+        RoleError,
+        WorkerError,
+        WorkTypeError,
+        AssignmentError,
+        AssignmentStateError,
+        AssignmentNotFoundError,
+    ) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     except RuntimeError as exc:
@@ -43,4 +56,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

@@ -1,0 +1,9 @@
+PASS tests
+PASS lint vendor/proofline/runs/general-work-contracts-phase-1/MANIFEST.json
+PASS verify vendor/proofline/runs/general-work-contracts-phase-1/MANIFEST.json
+PASS closeout vendor/proofline/runs/general-work-contracts-phase-1/MANIFEST.json
+PASS lint vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json
+PASS verify vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json
+PASS closeout vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json
+PASS git diff --check
+CIPH repo gate passed

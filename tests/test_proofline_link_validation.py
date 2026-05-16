@@ -17,7 +17,7 @@ class TestProoflineLinkValidation(unittest.TestCase):
     def tearDown(self) -> None:
         self.temp.cleanup()
 
-    def test_reject_link_without_required_keys(self) -> None:
+    def test_reject_empty_assignment_contract(self) -> None:
         with self.assertRaises(AssignmentValidationError):
             create_assignment(
                 self.root,
@@ -64,6 +64,30 @@ class TestProoflineLinkValidation(unittest.TestCase):
             proofline_link={"child_task": "runs/x/children/reviewer/CHILD_TASK.md"},
         )
         self.assertTrue(assignment["assignment_id"].startswith("asg_"))
+        self.assertEqual(
+            assignment["context_refs"],
+            [{"kind": "child_task", "path": "runs/x/children/reviewer/CHILD_TASK.md"}],
+        )
+
+    def test_reject_missing_file_context_ref(self) -> None:
+        with self.assertRaises(AssignmentValidationError):
+            create_assignment(
+                self.root,
+                role_id="planner",
+                title="missing file",
+                proofline_link={},
+                context_refs=[{"kind": "file", "path": "docs/missing.md"}],
+            )
+
+    def test_reject_outside_context_ref_path(self) -> None:
+        with self.assertRaises(AssignmentValidationError):
+            create_assignment(
+                self.root,
+                role_id="planner",
+                title="outside file",
+                proofline_link={},
+                context_refs=[{"kind": "file", "path": "../outside.md"}],
+            )
 
 
 if __name__ == "__main__":

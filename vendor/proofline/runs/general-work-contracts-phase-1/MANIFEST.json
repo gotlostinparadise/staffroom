@@ -1,0 +1,282 @@
+{
+  "schema_version": "ciph.manifest.v1",
+  "task_id": "general-work-contracts-phase-1",
+  "objective": "Generalize Staffroom into a supervised local coordination hub for workers and work types",
+  "deliverables": [
+    {
+      "id": "GW01",
+      "requirement": "Add durable worker profile storage and CLI commands for create/list/show.",
+      "artifact_paths": [
+        "staffroom/storage/workers.py",
+        "staffroom/storage/worker_schema.py",
+        "staffroom/commands/workers.py",
+        "tests/test_workers.py",
+        "tests/test_cli_entrypoint.py"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/worker-storage.txt",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/cli.txt"
+      ]
+    },
+    {
+      "id": "GW02",
+      "requirement": "Add durable work type template storage, built-in starter templates, and CLI commands for create/list/show.",
+      "artifact_paths": [
+        "staffroom/storage/work_types.py",
+        "staffroom/storage/work_type_schema.py",
+        "staffroom/commands/work_types.py",
+        "work_types/coding.json",
+        "work_types/research.json",
+        "work_types/writing.json",
+        "work_types/review.json",
+        "work_types/analysis.json",
+        "work_types/operations.json",
+        "tests/test_work_types.py",
+        "tests/test_cli_entrypoint.py"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/work-type-storage.txt",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/cli.txt"
+      ]
+    },
+    {
+      "id": "GW03",
+      "requirement": "Generalize assignment creation with optional Proofline context, work types, expected outputs, acceptance criteria, context refs, and worker assignment compatibility.",
+      "artifact_paths": [
+        "staffroom/storage/assignment_schema.py",
+        "staffroom/storage/assignments.py",
+        "staffroom/commands/assignments.py",
+        "tests/test_assignment_creation.py",
+        "tests/test_proofline_link_validation.py",
+        "tests/test_supervisor_protocol.py",
+        "tests/test_cli_entrypoint.py"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/assignment-storage.txt",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/cli.txt"
+      ]
+    },
+    {
+      "id": "GW04",
+      "requirement": "Document Staffroom as a general supervised coordination hub and record the design boundary.",
+      "artifact_paths": [
+        "README.md",
+        "docs/plans/2026-05-17-general-work-contracts-phase-1.md"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/readme-smoke.txt"
+      ]
+    },
+    {
+      "id": "GW05",
+      "requirement": "Preserve existing behavior and close the run with verifiable Proofline artifacts.",
+      "artifact_paths": [
+        "staffroom/",
+        "tests/",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/status.md",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/closeout.md"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/full-unittest.txt",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/status.md",
+        "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/closeout.md"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "staffroom/storage/workers.py",
+      "description": "Worker profile persistence operations.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/worker_schema.py",
+      "description": "Worker profile schema validation.",
+      "required": true
+    },
+    {
+      "path": "staffroom/commands/workers.py",
+      "description": "Worker CLI command handlers.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/work_types.py",
+      "description": "Work type template persistence operations.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/work_type_schema.py",
+      "description": "Work type schema validation.",
+      "required": true
+    },
+    {
+      "path": "staffroom/commands/work_types.py",
+      "description": "Work type CLI command handlers.",
+      "required": true
+    },
+    {
+      "path": "work_types/coding.json",
+      "description": "Built-in coding work type template.",
+      "required": true
+    },
+    {
+      "path": "work_types/research.json",
+      "description": "Built-in research work type template.",
+      "required": true
+    },
+    {
+      "path": "work_types/writing.json",
+      "description": "Built-in writing work type template.",
+      "required": true
+    },
+    {
+      "path": "work_types/review.json",
+      "description": "Built-in review work type template.",
+      "required": true
+    },
+    {
+      "path": "work_types/analysis.json",
+      "description": "Built-in analysis work type template.",
+      "required": true
+    },
+    {
+      "path": "work_types/operations.json",
+      "description": "Built-in operations work type template.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/assignment_schema.py",
+      "description": "General assignment schema validation.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/assignments.py",
+      "description": "Assignment storage, context refs, and worker assignment semantics.",
+      "required": true
+    },
+    {
+      "path": "staffroom/commands/assignments.py",
+      "description": "Assignment CLI generalized contract flags and worker assignment.",
+      "required": true
+    },
+    {
+      "path": "tests/test_workers.py",
+      "description": "Worker storage tests.",
+      "required": true
+    },
+    {
+      "path": "tests/test_work_types.py",
+      "description": "Work type storage tests.",
+      "required": true
+    },
+    {
+      "path": "tests/test_assignment_creation.py",
+      "description": "General assignment contract tests.",
+      "required": true
+    },
+    {
+      "path": "tests/test_proofline_link_validation.py",
+      "description": "Context ref and Proofline path validation tests.",
+      "required": true
+    },
+    {
+      "path": "tests/test_supervisor_protocol.py",
+      "description": "Supervised lifecycle regression tests.",
+      "required": true
+    },
+    {
+      "path": "tests/test_cli_entrypoint.py",
+      "description": "CLI regression and new command tests.",
+      "required": true
+    },
+    {
+      "path": "README.md",
+      "description": "Staffroom user documentation.",
+      "required": true
+    },
+    {
+      "path": "docs/plans/2026-05-17-general-work-contracts-phase-1.md",
+      "description": "Design boundary for general work contracts.",
+      "required": true
+    },
+    {
+      "path": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/status.md",
+      "description": "Run status artifact.",
+      "required": true
+    },
+    {
+      "path": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/closeout.md",
+      "description": "Run closeout artifact.",
+      "required": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "manifest-lint",
+      "command": "python3 vendor/proofline/scripts/lint_manifest.py vendor/proofline/runs/general-work-contracts-phase-1/MANIFEST.json --root .",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/manifest-lint.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "worker-storage",
+      "command": "python3 -m unittest tests.test_workers",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/worker-storage.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "work-type-storage",
+      "command": "python3 -m unittest tests.test_work_types",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/work-type-storage.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "assignment-storage",
+      "command": "python3 -m unittest tests.test_assignment_creation tests.test_proofline_link_validation tests.test_supervisor_protocol",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/assignment-storage.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "cli",
+      "command": "python3 -m unittest tests.test_cli_entrypoint",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/cli.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "full-unittest",
+      "command": "python3 -m unittest discover tests",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/full-unittest.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "readme-smoke",
+      "command": "python3 - <<'PY'\nfrom pathlib import Path\ntext = Path('README.md').read_text(encoding='utf-8')\nrequired = ['coordination hub', 'worker create', 'work-type create', 'context_refs', 'assigned_worker_id', 'Proofline']\nmissing = [item for item in required if item not in text]\nif missing:\n    raise SystemExit(f'missing README terms: {missing}')\nprint('README general work hub terms present')\nPY",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/readme-smoke.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "run-status-artifact",
+      "command": "python3 vendor/proofline/scripts/run_status.py vendor/proofline/runs/general-work-contracts-phase-1/MANIFEST.json --root . --output vendor/proofline/runs/general-work-contracts-phase-1/artifacts/status.md",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/run-status.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "run-closeout-artifact",
+      "command": "python3 vendor/proofline/scripts/closeout_check.py vendor/proofline/runs/general-work-contracts-phase-1/MANIFEST.json --root . --output vendor/proofline/runs/general-work-contracts-phase-1/artifacts/closeout.md",
+      "required": true,
+      "evidence": "vendor/proofline/runs/general-work-contracts-phase-1/artifacts/checks/closeout-check.txt",
+      "evidence_producer": "run_checks"
+    }
+  ],
+  "risks": [
+    "Existing compatibility fields and CLI flags must remain readable so older assignments can still be closed.",
+    "Context refs generalize Proofline links without treating Staffroom as a worker runtime."
+  ]
+}

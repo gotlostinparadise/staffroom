@@ -1,0 +1,18 @@
+{
+  "work_type_id": "operations",
+  "name": "Operations",
+  "description": "Coordinate operational work, checks, procedures, or incidents.",
+  "default_expected_outputs": [
+    "status update",
+    "action log"
+  ],
+  "allowed_evidence_kinds": [
+    "log",
+    "file",
+    "note"
+  ],
+  "recommended_role_ids": [
+    "operator",
+    "supervisor"
+  ]
+}

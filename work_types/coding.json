@@ -1,0 +1,19 @@
+{
+  "work_type_id": "coding",
+  "name": "Coding",
+  "description": "Implement, modify, or verify software behavior.",
+  "default_expected_outputs": [
+    "code changes",
+    "tests",
+    "verification evidence"
+  ],
+  "allowed_evidence_kinds": [
+    "test-output",
+    "diff",
+    "file"
+  ],
+  "recommended_role_ids": [
+    "developer",
+    "reviewer"
+  ]
+}

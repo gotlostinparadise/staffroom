@@ -1,0 +1,17 @@
+{
+  "work_type_id": "review",
+  "name": "Review",
+  "description": "Inspect work products and report findings, risks, or approval notes.",
+  "default_expected_outputs": [
+    "findings",
+    "approval recommendation"
+  ],
+  "allowed_evidence_kinds": [
+    "file",
+    "test-output",
+    "note"
+  ],
+  "recommended_role_ids": [
+    "reviewer"
+  ]
+}

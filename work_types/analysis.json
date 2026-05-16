@@ -1,0 +1,18 @@
+{
+  "work_type_id": "analysis",
+  "name": "Analysis",
+  "description": "Break down evidence, options, tradeoffs, or decisions.",
+  "default_expected_outputs": [
+    "analysis brief",
+    "recommendation"
+  ],
+  "allowed_evidence_kinds": [
+    "file",
+    "url",
+    "note"
+  ],
+  "recommended_role_ids": [
+    "analyst",
+    "reviewer"
+  ]
+}

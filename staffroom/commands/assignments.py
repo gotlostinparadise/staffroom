@@ -27,6 +27,28 @@ def register_assignment_commands(subparsers: argparse._SubParsersAction) -> None
     create_parser = assignment_subcommands.add_parser("create", help="Create an assignment")
     create_parser.add_argument("--role", required=True, help="Role identifier")
     create_parser.add_argument("--title", required=True, help="Human-readable assignment title")
+    create_parser.add_argument("--work-type", dest="work_type", default=None, help="Work type identifier")
+    create_parser.add_argument(
+        "--expected-output",
+        action="append",
+        default=[],
+        dest="expected_outputs",
+        help="Expected output (can be repeated)",
+    )
+    create_parser.add_argument(
+        "--acceptance",
+        action="append",
+        default=[],
+        dest="acceptance_criteria",
+        help="Acceptance criterion (can be repeated)",
+    )
+    create_parser.add_argument(
+        "--context-ref",
+        action="append",
+        default=[],
+        dest="context_refs",
+        help="Context reference in kind:value form, for example file:docs/brief.md",
+    )
     create_parser.add_argument("--proofline-run", dest="proofline_run", default=None, help="Path to a Proofline run")
     create_parser.add_argument("--child-task", dest="child_task", default=None, help="Path to a child task packet")
     create_parser.set_defaults(func=create_assignment_handler)
@@ -35,12 +57,15 @@ def register_assignment_commands(subparsers: argparse._SubParsersAction) -> None
     list_parser.add_argument("--state", default=None, help="Filter by assignment state")
     list_parser.add_argument("--role", dest="role_id", default=None, help="Filter by role identifier")
     list_parser.add_argument("--agent", dest="agent_id", default=None, help="Filter by assigned agent identifier")
+    list_parser.add_argument("--worker", dest="worker_id", default=None, help="Filter by assigned worker identifier")
     list_parser.add_argument("--json", action="store_true", help="Emit JSON output")
     list_parser.set_defaults(func=list_assignment_handler)
 
-    assign_parser = assignment_subcommands.add_parser("assign", help="Assign pending work to an agent")
+    assign_parser = assignment_subcommands.add_parser("assign", help="Assign pending work to a worker")
     assign_parser.add_argument("assignment_id")
-    assign_parser.add_argument("--agent", required=True, help="Agent identifier")
+    assign_target = assign_parser.add_mutually_exclusive_group(required=True)
+    assign_target.add_argument("--worker", dest="worker_id", help="Worker identifier")
+    assign_target.add_argument("--agent", dest="agent_id", help="Agent identifier compatibility alias")
     assign_parser.add_argument("--supervisor", default="operator", help="Supervisor identifier")
     assign_parser.set_defaults(func=assign_assignment_handler)
 
@@ -104,9 +129,28 @@ def create_assignment_handler(args: argparse.Namespace) -> int:
         role_id=args.role,
         title=args.title,
         proofline_link=proofline_link,
+        work_type=args.work_type,
+        expected_outputs=args.expected_outputs,
+        acceptance_criteria=args.acceptance_criteria,
+        context_refs=_parse_context_refs(args.context_refs),
     )
     print(json.dumps(assignment, sort_keys=True))
     return 0
+
+
+def _parse_context_refs(values: list[str]) -> list[dict]:
+    refs: list[dict] = []
+    for raw in values:
+        if ":" not in raw:
+            raise RuntimeError("context refs must use kind:value form")
+        kind, value = raw.split(":", 1)
+        if not kind.strip() or not value.strip():
+            raise RuntimeError("context refs must use non-empty kind:value form")
+        if kind in {"file", "proofline_run", "child_task"}:
+            refs.append({"kind": kind, "path": value})
+        else:
+            refs.append({"kind": kind, "value": value})
+    return refs
 
 
 def list_assignment_handler(args: argparse.Namespace) -> int:
@@ -115,6 +159,7 @@ def list_assignment_handler(args: argparse.Namespace) -> int:
         state=args.state,
         role_id=args.role_id,
         agent_id=args.agent_id,
+        worker_id=args.worker_id,
     )
     print(json.dumps(assignments, sort_keys=True))
     return 0
@@ -124,7 +169,8 @@ def assign_assignment_handler(args: argparse.Namespace) -> int:
     assignment = assign_assignment(
         Path(args.root),
         args.assignment_id,
-        agent_id=args.agent,
+        agent_id=args.agent_id,
+        worker_id=args.worker_id,
         supervisor_id=args.supervisor,
     )
     print(json.dumps(assignment, sort_keys=True))

@@ -15,6 +15,8 @@ from staffroom.storage.assignment_schema import (
     validate_assignment_payload,
 )
 from staffroom.storage.roles import RoleNotFoundError, role_exists
+from staffroom.storage.work_type_schema import validate_work_type_id
+from staffroom.storage.workers import worker_exists
 
 
 class AssignmentError(ValueError):
@@ -130,23 +132,116 @@ def _validate_evidence_path(root_path: Path, value: str) -> str:
     return path_value
 
 
+def _validate_context_path(root_path: Path, value: str, field_name: str) -> str:
+    path_value = _require_non_empty_string(value, field_name)
+    candidate = Path(path_value)
+    if candidate.is_absolute():
+        raise AssignmentValidationError(f"{field_name} must be relative to repo root")
+
+    root_abs = root_path.resolve(strict=False)
+    target_abs = (root_path / candidate).resolve(strict=False)
+    try:
+        target_abs.relative_to(root_abs)
+    except ValueError:
+        raise AssignmentValidationError(f"{field_name} must be inside repo root: {path_value}") from None
+
+    if not target_abs.exists():
+        raise AssignmentValidationError(f"{field_name} path not found: {path_value}")
+    return path_value
+
+
+def _normalize_string_list(values: list[str] | None, field_name: str) -> list[str]:
+    if values is None:
+        return []
+    if not isinstance(values, list) or not all(isinstance(item, str) for item in values):
+        raise AssignmentValidationError(f"{field_name} must be a list of strings")
+    normalized = [item.strip() for item in values]
+    if any(not item for item in normalized):
+        raise AssignmentValidationError(f"{field_name} must contain non-empty strings")
+    return normalized
+
+
+def _normalize_context_refs(root_path: Path, refs: list[dict] | None) -> list[dict]:
+    if refs is None:
+        return []
+    if not isinstance(refs, list):
+        raise AssignmentValidationError("context_refs must be a list")
+
+    normalized: list[dict] = []
+    for ref in refs:
+        if not isinstance(ref, dict):
+            raise AssignmentValidationError("context_refs entries must be objects")
+        kind = _require_non_empty_string(ref.get("kind"), "context_refs.kind")
+        item: dict = {"kind": kind}
+
+        path_value = ref.get("path")
+        value = ref.get("value")
+        if path_value is not None:
+            item["path"] = _validate_context_path(root_path, path_value, f"context_refs.{kind}.path")
+        if value is not None:
+            item["value"] = _require_non_empty_string(value, f"context_refs.{kind}.value")
+
+        if "path" not in item and "value" not in item:
+            raise AssignmentValidationError("context_refs entries must include path or value")
+
+        if "label" in ref:
+            item["label"] = _require_non_empty_string(ref.get("label"), "context_refs.label")
+
+        normalized.append(item)
+
+    return normalized
+
+
+def _proofline_link_to_context_refs(proofline_link: dict) -> list[dict]:
+    refs: list[dict] = []
+    if "proofline_run" in proofline_link:
+        refs.append({"kind": "proofline_run", "path": proofline_link["proofline_run"]})
+    if "child_task" in proofline_link:
+        refs.append({"kind": "child_task", "path": proofline_link["child_task"]})
+    return refs
+
+
 def create_assignment(
     root: Path | str,
     role_id: str,
     title: str,
-    proofline_link: dict,
+    proofline_link: dict | None = None,
+    work_type: str | None = None,
+    expected_outputs: list[str] | None = None,
+    acceptance_criteria: list[str] | None = None,
+    context_refs: list[dict] | None = None,
     assignment_id: str | None = None,
 ) -> dict:
     root_path = Path(root)
     if not role_exists(root_path, role_id):
         raise RoleNotFoundError(f"Role not found: {role_id}")
 
-    if not proofline_link:
-        raise AssignmentValidationError("proofline_link is required")
-    try:
-        proofline_link = validate_proofline_link(proofline_link, root_path)
-    except ValueError as exc:
-        raise AssignmentValidationError(str(exc)) from exc
+    normalized_proofline_link: dict = {}
+    proofline_refs: list[dict] = []
+    if proofline_link:
+        try:
+            normalized_proofline_link = validate_proofline_link(proofline_link, root_path)
+        except ValueError as exc:
+            raise AssignmentValidationError(str(exc)) from exc
+        proofline_refs = _proofline_link_to_context_refs(normalized_proofline_link)
+
+    normalized_context_refs = proofline_refs + _normalize_context_refs(root_path, context_refs)
+    normalized_expected_outputs = _normalize_string_list(expected_outputs, "expected_outputs")
+    normalized_acceptance_criteria = _normalize_string_list(acceptance_criteria, "acceptance_criteria")
+    normalized_work_type = work_type.strip() if isinstance(work_type, str) else None
+    if work_type is not None and (not normalized_work_type or not validate_work_type_id(normalized_work_type)):
+        raise AssignmentValidationError(f"Invalid work_type '{work_type}'. Must match ^[a-z0-9-]+$")
+
+    if not (
+        normalized_proofline_link
+        or normalized_context_refs
+        or normalized_work_type
+        or normalized_expected_outputs
+        or normalized_acceptance_criteria
+    ):
+        raise AssignmentValidationError(
+            "assignment contract requires proofline_link, context_refs, work_type, expected_outputs, or acceptance_criteria"
+        )
 
     generated = assignment_id or f"asg_{uuid.uuid4().hex[:8]}"
     if not validate_assignment_id(generated):
@@ -160,8 +255,16 @@ def create_assignment(
         "title": title,
         "status": "pending",
         "created_at_utc": _utc_timestamp(),
-        "proofline_link": proofline_link,
+        "context_refs": normalized_context_refs,
     }
+    if normalized_proofline_link:
+        payload["proofline_link"] = normalized_proofline_link
+    if normalized_work_type:
+        payload["work_type"] = normalized_work_type
+    if normalized_expected_outputs:
+        payload["expected_outputs"] = normalized_expected_outputs
+    if normalized_acceptance_criteria:
+        payload["acceptance_criteria"] = normalized_acceptance_criteria
 
     try:
         validate_assignment_payload(payload)
@@ -194,6 +297,7 @@ def list_assignments(
     state: str | None = None,
     role_id: str | None = None,
     agent_id: str | None = None,
+    worker_id: str | None = None,
 ) -> list[dict]:
     root_path = Path(root)
     if state is not None and state not in ASSIGNMENT_STATUSES:
@@ -211,6 +315,8 @@ def list_assignments(
                 continue
             if agent_id is not None and payload.get("assigned_agent_id") != agent_id:
                 continue
+            if worker_id is not None and payload.get("assigned_worker_id") != worker_id:
+                continue
             results.append(payload)
 
     results.sort(key=lambda item: (item.get("created_at_utc", ""), item.get("assignment_id", "")))
@@ -221,11 +327,18 @@ def assign_assignment(
     root: Path | str,
     assignment_id: str,
     *,
-    agent_id: str,
+    agent_id: str | None = None,
+    worker_id: str | None = None,
     supervisor_id: str = "operator",
 ) -> dict:
     root_path = Path(root)
-    agent = _require_non_empty_string(agent_id, "agent_id")
+    if worker_id is None and agent_id is None:
+        raise AssignmentValidationError("worker_id or agent_id is required")
+
+    worker = _require_non_empty_string(worker_id if worker_id is not None else agent_id, "worker_id")
+    if worker_id is not None and not worker_exists(root_path, worker):
+        raise AssignmentValidationError(f"Worker not found: {worker}")
+
     supervisor = _require_non_empty_string(supervisor_id, "supervisor_id")
     state, path = _find_assignment(root_path, assignment_id)
     if state != "pending":
@@ -233,10 +346,11 @@ def assign_assignment(
 
     payload = _load_from_path(path)
     payload["status"] = "assigned"
-    payload["assigned_agent_id"] = agent
+    payload["assigned_worker_id"] = worker
+    payload["assigned_agent_id"] = worker
     payload["assigned_at_utc"] = _utc_timestamp()
     payload["assigned_by"] = supervisor
-    _append_event(payload, "assigned", supervisor, f"assigned to {agent}")
+    _append_event(payload, "assigned", supervisor, f"assigned to {worker}")
     return _write_payload(root_path, path, assignment_id, payload)
 
 
