@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import tempfile
+import unittest
+from pathlib import Path
+
+from staffroom.storage.assignments import AssignmentValidationError, create_assignment
+from staffroom.storage.roles import create_role
+
+
+class TestAssignmentCreation(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        create_role(self.root, role_id="planner", name="Planner")
+        run_manifest = self.root / "runs" / "staffroom-mvp" / "MANIFEST.json"
+        run_manifest.parent.mkdir(parents=True, exist_ok=True)
+        run_manifest.write_text("{}", encoding="utf-8")
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def test_create_assignment_with_proofline_run(self) -> None:
+        assignment = create_assignment(
+            self.root,
+            role_id="planner",
+            title="Coordinate shift schedule",
+            proofline_link={"proofline_run": "runs/staffroom-mvp/MANIFEST.json"},
+        )
+        assignment_path = self.root / "assignments" / "pending" / f"{assignment['assignment_id']}.json"
+        self.assertTrue(assignment_path.exists())
+        self.assertEqual(assignment["status"], "pending")
+
+    def test_reject_missing_proofline_link(self) -> None:
+        with self.assertRaises(AssignmentValidationError):
+            create_assignment(
+                self.root,
+                role_id="planner",
+                title="No link",
+                proofline_link={},
+            )
+
+
+if __name__ == "__main__":
+    unittest.main()
+
