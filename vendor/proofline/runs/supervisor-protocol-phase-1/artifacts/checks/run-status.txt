@@ -1,0 +1,10 @@
+CIPH-CHECK-EVIDENCE v1
+{"check_name": "run-status-artifact", "command": "python3 vendor/proofline/scripts/run_status.py vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json --root . --output vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/status.md", "exit_code": 0, "finished_at_utc": "2026-05-16T18:20:42+00:00", "generated_by": "scripts/run_checks.py", "started_at_utc": "2026-05-16T18:20:42+00:00", "status": "PASS"}
+
+## STDOUT
+
+Wrote CIPH run status: vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/status.md
+
+## STDERR
+
+<empty>

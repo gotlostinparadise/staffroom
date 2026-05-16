@@ -1,0 +1,14 @@
+CIPH-CHECK-EVIDENCE v1
+{"check_name": "supervisor-cli", "command": "python3 -m unittest tests.test_cli_entrypoint", "exit_code": 0, "finished_at_utc": "2026-05-16T18:20:42+00:00", "generated_by": "scripts/run_checks.py", "started_at_utc": "2026-05-16T18:20:41+00:00", "status": "PASS"}
+
+## STDOUT
+
+<empty>
+
+## STDERR
+
+..
+----------------------------------------------------------------------
+Ran 2 tests in 0.430s
+
+OK

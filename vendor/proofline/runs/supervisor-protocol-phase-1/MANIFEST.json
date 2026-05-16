@@ -1,0 +1,192 @@
+{
+  "schema_version": "ciph.manifest.v1",
+  "task_id": "supervisor-protocol-phase-1",
+  "objective": "Make Staffroom agent-first through a supervised assignment protocol",
+  "deliverables": [
+    {
+      "id": "SP01",
+      "requirement": "Define the supervised agent-first product design and implementation plan.",
+      "artifact_paths": [
+        "docs/plans/2026-05-17-supervisor-protocol-design.md",
+        "docs/plans/2026-05-17-supervisor-protocol-implementation.md"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/manifest-lint.txt"
+      ]
+    },
+    {
+      "id": "SP02",
+      "requirement": "Extend assignment schema and storage with assigned/review states plus supervisor/agent metadata, events, and evidence.",
+      "artifact_paths": [
+        "assignments/assigned/",
+        "assignments/review/",
+        "staffroom/storage/assignment_schema.py",
+        "staffroom/storage/assignments.py",
+        "tests/test_supervisor_protocol.py"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/supervisor-storage.txt"
+      ]
+    },
+    {
+      "id": "SP03",
+      "requirement": "Add agent-facing CLI commands for list, assign, start, note, evidence add, and submit with JSON output.",
+      "artifact_paths": [
+        "staffroom/commands/assignments.py",
+        "tests/test_cli_entrypoint.py"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/supervisor-cli.txt"
+      ]
+    },
+    {
+      "id": "SP04",
+      "requirement": "Preserve MVP role, assignment, Proofline linkage, and close behavior.",
+      "artifact_paths": [
+        "staffroom/",
+        "tests/"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/full-unittest.txt"
+      ]
+    },
+    {
+      "id": "SP05",
+      "requirement": "Document the supervised agent-first workflow and verification flow.",
+      "artifact_paths": [
+        "README.md"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/readme-smoke.txt"
+      ]
+    },
+    {
+      "id": "SP06",
+      "requirement": "Produce run status and closeout artifacts.",
+      "artifact_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/status.md",
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/closeout.md"
+      ],
+      "evidence_paths": [
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/status.md",
+        "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/closeout.md"
+      ]
+    }
+  ],
+  "artifacts": [
+    {
+      "path": "docs/plans/2026-05-17-supervisor-protocol-design.md",
+      "description": "Design for supervised agent-first Staffroom workflow.",
+      "required": true
+    },
+    {
+      "path": "docs/plans/2026-05-17-supervisor-protocol-implementation.md",
+      "description": "Implementation plan for supervised agent protocol.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/assignment_schema.py",
+      "description": "Assignment statuses and validation.",
+      "required": true
+    },
+    {
+      "path": "assignments/assigned/",
+      "description": "Tracked directory for assigned assignment artifacts.",
+      "required": true
+    },
+    {
+      "path": "assignments/review/",
+      "description": "Tracked directory for assignments submitted for review.",
+      "required": true
+    },
+    {
+      "path": "staffroom/storage/assignments.py",
+      "description": "Assignment storage, state transitions, events, evidence, and listing.",
+      "required": true
+    },
+    {
+      "path": "staffroom/commands/assignments.py",
+      "description": "Assignment CLI commands.",
+      "required": true
+    },
+    {
+      "path": "tests/test_supervisor_protocol.py",
+      "description": "Storage-level supervised protocol tests.",
+      "required": true
+    },
+    {
+      "path": "tests/test_cli_entrypoint.py",
+      "description": "CLI-level protocol tests.",
+      "required": true
+    },
+    {
+      "path": "README.md",
+      "description": "User and operator documentation.",
+      "required": true
+    },
+    {
+      "path": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/status.md",
+      "description": "Run status artifact.",
+      "required": true
+    },
+    {
+      "path": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/closeout.md",
+      "description": "Run closeout artifact.",
+      "required": true
+    }
+  ],
+  "checks": [
+    {
+      "name": "manifest-lint",
+      "command": "python3 vendor/proofline/scripts/lint_manifest.py vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json --root .",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/manifest-lint.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "supervisor-storage",
+      "command": "python3 -m unittest tests.test_supervisor_protocol",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/supervisor-storage.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "supervisor-cli",
+      "command": "python3 -m unittest tests.test_cli_entrypoint",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/supervisor-cli.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "full-unittest",
+      "command": "python3 -m unittest discover tests",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/full-unittest.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "readme-smoke",
+      "command": "python3 - <<'PY'\nfrom pathlib import Path\ntext = Path('README.md').read_text(encoding='utf-8')\nrequired = ['Supervisor', 'assignment assign', 'assignment submit', 'assignment evidence add', 'review', 'vendor/proofline']\nmissing = [item for item in required if item not in text]\nif missing:\n    raise SystemExit(f'missing README terms: {missing}')\nprint('README supervised protocol terms present')\nPY",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/readme-smoke.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "run-status-artifact",
+      "command": "python3 vendor/proofline/scripts/run_status.py vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json --root . --output vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/status.md",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/run-status.txt",
+      "evidence_producer": "run_checks"
+    },
+    {
+      "name": "run-closeout-artifact",
+      "command": "python3 vendor/proofline/scripts/closeout_check.py vendor/proofline/runs/supervisor-protocol-phase-1/MANIFEST.json --root . --output vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/closeout.md",
+      "required": true,
+      "evidence": "vendor/proofline/runs/supervisor-protocol-phase-1/artifacts/checks/closeout-check.txt",
+      "evidence_producer": "run_checks"
+    }
+  ],
+  "risks": [
+    "The current root commit does not include the earlier root-level Proofline scripts; this milestone uses vendor/proofline as the durable harness location."
+  ]
+}

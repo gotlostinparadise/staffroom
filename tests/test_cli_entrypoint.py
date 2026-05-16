@@ -79,6 +79,190 @@ class TestCLIEntrypoint(unittest.TestCase):
         self.assertEqual(payload["status"], "pending")
         self.assertEqual(payload["role_id"], "planner")
 
+    def test_supervisor_protocol_commands_emit_json(self) -> None:
+        role_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "role",
+                "create",
+                "planner",
+                "--name",
+                "Planner",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(role_result.returncode, 0)
+
+        run_manifest = self.root / "runs" / "staffroom-mvp" / "MANIFEST.json"
+        run_manifest.parent.mkdir(parents=True, exist_ok=True)
+        run_manifest.write_text("{}", encoding="utf-8")
+
+        assignment_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "create",
+                "--role",
+                "planner",
+                "--title",
+                "Handle queue",
+                "--proofline-run",
+                "runs/staffroom-mvp/MANIFEST.json",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(assignment_result.returncode, 0)
+        assignment_id = json.loads(assignment_result.stdout)["assignment_id"]
+
+        assign_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "assign",
+                assignment_id,
+                "--agent",
+                "agent-reviewer-1",
+                "--supervisor",
+                "lead",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(assign_result.returncode, 0)
+        self.assertEqual(json.loads(assign_result.stdout)["status"], "assigned")
+
+        start_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "start",
+                assignment_id,
+                "--agent",
+                "agent-reviewer-1",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(start_result.returncode, 0)
+        self.assertEqual(json.loads(start_result.stdout)["status"], "active")
+
+        note_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "note",
+                assignment_id,
+                "--agent",
+                "agent-reviewer-1",
+                "--text",
+                "working",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(note_result.returncode, 0)
+        self.assertEqual(json.loads(note_result.stdout)["events"][-1]["type"], "note")
+
+        evidence_file = self.root / "runs" / "staffroom-mvp" / "artifacts" / "test.txt"
+        evidence_file.parent.mkdir(parents=True, exist_ok=True)
+        evidence_file.write_text("ok", encoding="utf-8")
+        evidence_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "evidence",
+                "add",
+                assignment_id,
+                "--agent",
+                "agent-reviewer-1",
+                "--kind",
+                "test-output",
+                "--path",
+                "runs/staffroom-mvp/artifacts/test.txt",
+                "--summary",
+                "test output",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(evidence_result.returncode, 0)
+        self.assertEqual(json.loads(evidence_result.stdout)["evidence"][-1]["kind"], "test-output")
+
+        submit_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "submit",
+                assignment_id,
+                "--agent",
+                "agent-reviewer-1",
+                "--notes",
+                "ready",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(submit_result.returncode, 0)
+        self.assertEqual(json.loads(submit_result.stdout)["status"], "review")
+
+        list_result = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "staffroom",
+                "--root",
+                str(self.root),
+                "assignment",
+                "list",
+                "--state",
+                "review",
+                "--json",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        self.assertEqual(list_result.returncode, 0)
+        listed = json.loads(list_result.stdout)
+        self.assertEqual([item["assignment_id"] for item in listed], [assignment_id])
+
 
 if __name__ == "__main__":
     unittest.main()

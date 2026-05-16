@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 
 ASSIGNMENT_ID_PATTERN = re.compile(r"^asg_[a-z0-9]{8}$")
-ASSIGNMENT_STATUSES = {"pending", "active", "closed"}
+ASSIGNMENT_STATUSES = {"pending", "assigned", "active", "review", "closed"}
 ASSIGNMENT_RESULTS = {"done", "rejected", "blocked", "error"}
 
 
@@ -37,4 +37,3 @@ def validate_assignment_payload(payload: dict) -> None:
         raise ValueError("proofline_link must be an object")
     if not proofline_link:
         raise ValueError("proofline_link must include at least one entry")
-

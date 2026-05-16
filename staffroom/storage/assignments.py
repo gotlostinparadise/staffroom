@@ -59,6 +59,77 @@ def _find_assignment(root: Path | str, assignment_id: str) -> tuple[str, Path]:
     raise AssignmentNotFoundError(f"Assignment not found: {assignment_id}")
 
 
+def _load_from_path(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _write_payload(root: Path, current_path: Path, assignment_id: str, payload: dict) -> dict:
+    target = assignment_path(root, payload["status"], assignment_id)
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    if target != current_path and current_path.exists():
+        current_path.unlink()
+    return payload
+
+
+def _require_non_empty_string(value: object, field_name: str) -> str:
+    if not isinstance(value, str) or not value.strip():
+        raise AssignmentValidationError(f"{field_name} must be a non-empty string")
+    return value
+
+
+def _ensure_events(payload: dict) -> list[dict]:
+    events = payload.setdefault("events", [])
+    if not isinstance(events, list):
+        raise AssignmentValidationError("events must be a list")
+    return events
+
+
+def _ensure_evidence(payload: dict) -> list[dict]:
+    evidence = payload.setdefault("evidence", [])
+    if not isinstance(evidence, list):
+        raise AssignmentValidationError("evidence must be a list")
+    return evidence
+
+
+def _append_event(payload: dict, event_type: str, actor_id: str, message: str = "") -> None:
+    events = _ensure_events(payload)
+    events.append(
+        {
+            "event_id": f"evt_{uuid.uuid4().hex[:8]}",
+            "type": event_type,
+            "occurred_at_utc": _utc_timestamp(),
+            "actor_id": actor_id,
+            "message": message,
+        }
+    )
+    payload["updated_at_utc"] = _utc_timestamp()
+
+
+def _require_assigned_agent(payload: dict, agent_id: str) -> None:
+    expected = payload.get("assigned_agent_id")
+    if expected != agent_id:
+        raise AssignmentStateError(f"Assignment is assigned to {expected}, not {agent_id}")
+
+
+def _validate_evidence_path(root_path: Path, value: str) -> str:
+    path_value = _require_non_empty_string(value, "evidence path")
+    candidate = Path(path_value)
+    if candidate.is_absolute():
+        raise AssignmentValidationError("evidence path must be relative to repo root")
+
+    root_abs = root_path.resolve(strict=False)
+    target_abs = (root_path / candidate).resolve(strict=False)
+    try:
+        target_abs.relative_to(root_abs)
+    except ValueError:
+        raise AssignmentValidationError(f"evidence path must be inside repo root: {path_value}") from None
+
+    if not target_abs.exists():
+        raise AssignmentValidationError(f"evidence path not found: {path_value}")
+    return path_value
+
+
 def create_assignment(
     root: Path | str,
     role_id: str,
@@ -117,10 +188,145 @@ def get_assignment_status(root: Path | str, assignment_id: str) -> dict:
     return payload
 
 
+def list_assignments(
+    root: Path | str,
+    *,
+    state: str | None = None,
+    role_id: str | None = None,
+    agent_id: str | None = None,
+) -> list[dict]:
+    root_path = Path(root)
+    if state is not None and state not in ASSIGNMENT_STATUSES:
+        raise AssignmentValidationError(f"Invalid state '{state}'.")
+
+    states = (state,) if state else _states()
+    results: list[dict] = []
+    for item_state in states:
+        state_dir = root_path / "assignments" / item_state
+        if not state_dir.exists():
+            continue
+        for path in sorted(state_dir.glob("*.json")):
+            payload = _load_from_path(path)
+            if role_id is not None and payload.get("role_id") != role_id:
+                continue
+            if agent_id is not None and payload.get("assigned_agent_id") != agent_id:
+                continue
+            results.append(payload)
+
+    results.sort(key=lambda item: (item.get("created_at_utc", ""), item.get("assignment_id", "")))
+    return results
+
+
+def assign_assignment(
+    root: Path | str,
+    assignment_id: str,
+    *,
+    agent_id: str,
+    supervisor_id: str = "operator",
+) -> dict:
+    root_path = Path(root)
+    agent = _require_non_empty_string(agent_id, "agent_id")
+    supervisor = _require_non_empty_string(supervisor_id, "supervisor_id")
+    state, path = _find_assignment(root_path, assignment_id)
+    if state != "pending":
+        raise AssignmentStateError(f"Can only assign pending assignments. Current status: {state}")
+
+    payload = _load_from_path(path)
+    payload["status"] = "assigned"
+    payload["assigned_agent_id"] = agent
+    payload["assigned_at_utc"] = _utc_timestamp()
+    payload["assigned_by"] = supervisor
+    _append_event(payload, "assigned", supervisor, f"assigned to {agent}")
+    return _write_payload(root_path, path, assignment_id, payload)
+
+
+def start_assignment(root: Path | str, assignment_id: str, *, agent_id: str) -> dict:
+    root_path = Path(root)
+    agent = _require_non_empty_string(agent_id, "agent_id")
+    state, path = _find_assignment(root_path, assignment_id)
+    if state != "assigned":
+        raise AssignmentStateError(f"Can only start assigned assignments. Current status: {state}")
+
+    payload = _load_from_path(path)
+    _require_assigned_agent(payload, agent)
+    payload["status"] = "active"
+    payload["started_at_utc"] = _utc_timestamp()
+    _append_event(payload, "started", agent, "started work")
+    return _write_payload(root_path, path, assignment_id, payload)
+
+
+def add_assignment_note(root: Path | str, assignment_id: str, *, agent_id: str, text: str) -> dict:
+    root_path = Path(root)
+    agent = _require_non_empty_string(agent_id, "agent_id")
+    note = _require_non_empty_string(text, "text")
+    state, path = _find_assignment(root_path, assignment_id)
+    if state == "closed":
+        raise AssignmentStateError(f"Assignment already closed: {assignment_id}")
+
+    payload = _load_from_path(path)
+    _require_assigned_agent(payload, agent)
+    _append_event(payload, "note", agent, note)
+    return _write_payload(root_path, path, assignment_id, payload)
+
+
+def add_assignment_evidence(
+    root: Path | str,
+    assignment_id: str,
+    *,
+    agent_id: str,
+    kind: str,
+    path: str,
+    summary: str = "",
+) -> dict:
+    root_path = Path(root)
+    agent = _require_non_empty_string(agent_id, "agent_id")
+    evidence_kind = _require_non_empty_string(kind, "kind")
+    evidence_path = _validate_evidence_path(root_path, path)
+    if not isinstance(summary, str):
+        raise AssignmentValidationError("summary must be a string")
+
+    state, current_path = _find_assignment(root_path, assignment_id)
+    if state not in {"active", "review"}:
+        raise AssignmentStateError(f"Can only add evidence to active or review assignments. Current status: {state}")
+
+    payload = _load_from_path(current_path)
+    _require_assigned_agent(payload, agent)
+    evidence = _ensure_evidence(payload)
+    evidence.append(
+        {
+            "evidence_id": f"ev_{uuid.uuid4().hex[:8]}",
+            "kind": evidence_kind,
+            "path": evidence_path,
+            "added_at_utc": _utc_timestamp(),
+            "added_by_agent_id": agent,
+            "summary": summary,
+        }
+    )
+    _append_event(payload, "evidence_added", agent, evidence_path)
+    return _write_payload(root_path, current_path, assignment_id, payload)
+
+
+def submit_assignment(root: Path | str, assignment_id: str, *, agent_id: str, notes: str) -> dict:
+    root_path = Path(root)
+    agent = _require_non_empty_string(agent_id, "agent_id")
+    submission_notes = _require_non_empty_string(notes, "notes")
+    state, path = _find_assignment(root_path, assignment_id)
+    if state != "active":
+        raise AssignmentStateError(f"Can only submit active assignments. Current status: {state}")
+
+    payload = _load_from_path(path)
+    _require_assigned_agent(payload, agent)
+    payload["status"] = "review"
+    payload["submitted_at_utc"] = _utc_timestamp()
+    payload["submitted_by_agent_id"] = agent
+    _append_event(payload, "submitted", agent, submission_notes)
+    return _write_payload(root_path, path, assignment_id, payload)
+
+
 def activate_assignment(root: Path | str, assignment_id: str) -> dict:
     root_path = Path(root)
     state, path = _find_assignment(root_path, assignment_id)
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = _load_from_path(path)
     if state != "pending":
         raise AssignmentStateError(f"Can only activate pending assignments. Current status: {state}")
 
@@ -152,12 +358,13 @@ def close_assignment(
     if state == "closed":
         raise AssignmentStateError(f"Assignment already closed: {assignment_id}")
 
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    payload = _load_from_path(path)
     payload["status"] = "closed"
     payload["closed_at_utc"] = _utc_timestamp()
     payload["result"] = result
     payload["notes"] = notes
     payload["closed_by"] = closed_by
+    _append_event(payload, "closed", closed_by, notes)
 
     target = assignment_path(root_path, "closed", assignment_id)
     target.parent.mkdir(parents=True, exist_ok=True)
