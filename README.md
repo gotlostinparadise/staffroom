@@ -1,5 +1,36 @@
 # Staffroom
 
+## Project Status: Frozen
+
+Staffroom is frozen as a standalone product.
+
+This repository proved useful concepts for supervised work coordination:
+roles, workers, work types, assignments, expected outputs, context refs,
+evidence, and supervisor closeout. Those concepts are not being developed here
+as an independent authority system.
+
+The direction has moved to the AgentOS / Mandate repository:
+
+```text
+~/Work/Projects/AGENTS/OS
+```
+
+AgentOS should be the source of truth for governed autonomous company work.
+Staffroom's useful ideas should be absorbed as a Company Workroom projection
+over AgentOS records, not maintained as a separate ledger or microservice.
+
+In practical terms:
+
+- do not add new Staffroom product features here;
+- do not treat this repo as an authority source for future autonomous company work;
+- use this codebase as a prototype/reference for operator-facing workroom UX;
+- build the next design inside AgentOS.
+
+Goodbye, Staffroom. You clarified the shape of the workroom; the kernel now
+gets the job.
+
+## Historical Summary
+
 Staffroom is a local, file-backed coordination hub for supervised work.
 It tracks assignments for humans, agents, services, and other workers while keeping supervisors in authority:
 
